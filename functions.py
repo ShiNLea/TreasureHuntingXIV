@@ -11,7 +11,6 @@ def readFile():
     writeNext = 0
     currentRegion = 0
     for region in zoneFile:
-        print(f"current region: {region}")
         if (region == "\n"):
             writeNext = True
             subregions += [[]]
@@ -21,19 +20,16 @@ def readFile():
                 zones += [region[:-1]]
                 writeNext = False
             else:
-                print("aaaaaaaa", currentRegion)
                 subregions[currentRegion] += [region[:-1]]
     print(zones)
     for i in range(len(subregions)):
         print(subregions[i])
-    '''
-    print("Select region:")
-    for i in range(len(zones)):
-        print()'''
+
     zoneFile.close()
     
     return zones, subregions
 
+## getRegion grabs region and subregion from user; returns filename
 def getRegion(zones, subregions):
     fileName = ""
     for i in range(len(zones)):
@@ -50,31 +46,63 @@ def getRegion(zones, subregions):
             else:
                 print("Invalid, please enter a valid number.")
     print("Subregions:")
-    for j in range(len(subregions)):
-        print(zones[selectedZone-1][j])
+    # Resetting selectedZone to work with list index
+    selectedZone -= 1
+
+    # Printing subregions of the selected zone
+    for j in range(len(subregions[selectedZone])):
+        print(f"[{j+1}]: {subregions[selectedZone][j]}")
+
+    # Data sanitation for subregion selection
     while True:
         try:
             selectedSubRegion = int(input("Select subregion: "))
         except TypeError:
             print("Invalid, please enter a number.")
         else:
-            if (0<selectedSubRegion<(len(zones[selectedZone-1]))+1):
+            if (0<selectedSubRegion<(len(subregions[selectedZone]))+1):
                 fileName += str(selectedSubRegion)
                 break
             else:
                 print("Invalid, please enter a valid number.")
     
     fileName += ".png"
+    print(f"file name: {fileName}")
     return fileName
 
-def search(region):
+def search(regionFile):
     # Grabbing image from clipboard, saving as a temporary file
     testMap = imgGet.grabclipboard()
     testMap.save("temp.png", "PNG")
 
     # Taking temporary image and preparing for comparison
     testImage = cv.imread("temp.png", cv.IMREAD_GRAYSCALE)
-    fullMap = cv.imread(region, cv.IMREAD_GRAYSCALE)
-    position = 0
-    return position
+    fullMap = cv.imread(regionFile, cv.IMREAD_GRAYSCALE)
 
+    # Initiate SIFT detector
+    sift = cv.SIFT_create()
+    # find the keypoints and descriptors with SIFT
+    keypointQuery, desQuery = sift.detectAndCompute(testImage,None)
+    keypointKnown, desKnown = sift.detectAndCompute(fullMap,None)
+
+    # FLANN parameters
+    FLANN_INDEX_KDTREE = 1
+    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    search_params = dict(checks=100)   # or pass empty dictionary
+    flann = cv.FlannBasedMatcher(index_params,search_params)
+    matches = flann.knnMatch(desQuery,desKnown,k=2)
+    
+    # Need to draw only good matches; creating mask
+    matchesMask = [[0,0] for i in range(len(matches))]
+    # ratio test as per Lowe's paper
+    for i,(m,n) in enumerate(matches):
+        if m.distance < 0.7*n.distance:
+            matchesMask[i]=[1,0]
+    draw_params = dict(matchColor = (0,255,0),
+                    singlePointColor = (255,0,0),
+                    matchesMask = matchesMask,
+                    flags = cv.DrawMatchesFlags_DEFAULT)
+    img3 = cv.drawMatchesKnn(testImage,keypointQuery,fullMap,keypointKnown,matches,None,**draw_params)
+
+    # Display test image vs full map w/ matches
+    plt.imshow(img3,),plt.show()
