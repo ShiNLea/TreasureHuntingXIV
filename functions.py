@@ -34,7 +34,7 @@ def readFile():
     
     return zones, subregions
 
-def getSubregion(zones, subregions):
+def getRegion(zones, subregions):
     fileName = ""
     for i in range(len(zones)):
         print(f"[{i}]: {zones[i]}")
@@ -45,13 +45,28 @@ def getSubregion(zones, subregions):
             print("Invalid, please enter a number.")
         else:
             if (0<selectedZone<(len(zones))+1):
+                fileName += str(selectedZone) + "-"
+                break
+            else:
+                print("Invalid, please enter a valid number.")
+    print("Subregions:")
+    for j in range(len(subregions)):
+        print(zones[selectedZone-1][j])
+    while True:
+        try:
+            selectedSubRegion = int(input("Select subregion: "))
+        except TypeError:
+            print("Invalid, please enter a number.")
+        else:
+            if (0<selectedSubRegion<(len(zones[selectedZone-1]))+1):
+                fileName += str(selectedSubRegion)
                 break
             else:
                 print("Invalid, please enter a valid number.")
     
-    
     fileName += ".png"
     return fileName
+
 def search(region):
     # Grabbing image from clipboard, saving as a temporary file
     testMap = imgGet.grabclipboard()
