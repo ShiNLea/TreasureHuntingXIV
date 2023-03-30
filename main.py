@@ -1,5 +1,4 @@
 import functions as func
-import os
 def main():
     
     zones, subregions = func.readFile()
@@ -10,5 +9,4 @@ def main():
     else:
         pass
     
-    print(os.getcwd())
 main()
