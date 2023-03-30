@@ -2,6 +2,19 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 import numpy as np
 from PIL import ImageGrab as imgGet
+import os
+
+class cd:
+    """Context manager for changing the current working directory"""
+    def __init__(self, newPath):
+        self.newPath = os.path.expanduser(newPath)
+
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
 
 def readFile():
     zoneFile = open("zones.txt", "r")
@@ -29,9 +42,9 @@ def readFile():
     
     return zones, subregions
 
-## getRegion grabs region and subregion from user; returns filename
+## getRegion grabs region and subregion from user; creates temporary file
 def getRegion(zones, subregions):
-    fileName = ""
+    fileLocation = []
     for i in range(len(zones)):
         print(f"[{i}]: {zones[i]}")
     while True:
@@ -41,14 +54,14 @@ def getRegion(zones, subregions):
             print("Invalid, please enter a number.")
         else:
             if (0<selectedZone<(len(zones))+1):
-                fileName += str(selectedZone) + "-"
+                fileLocation += [selectedZone]
                 break
             else:
                 print("Invalid, please enter a valid number.")
     print("Subregions:")
+    
     # Resetting selectedZone to work with list index
     selectedZone -= 1
-
     # Printing subregions of the selected zone
     for j in range(len(subregions[selectedZone])):
         print(f"[{j+1}]: {subregions[selectedZone][j]}")
@@ -61,14 +74,12 @@ def getRegion(zones, subregions):
             print("Invalid, please enter a number.")
         else:
             if (0<selectedSubRegion<(len(subregions[selectedZone]))+1):
-                fileName += str(selectedSubRegion)
+                fileLocation += [selectedSubRegion]
                 break
             else:
                 print("Invalid, please enter a valid number.")
     
-    fileName += ".png"
-    print(f"file name: {fileName}")
-    return fileName
+    return fileLocation
 
 def search(regionFile):
     # Grabbing image from clipboard, saving as a temporary file
@@ -77,7 +88,15 @@ def search(regionFile):
 
     # Taking temporary image and preparing for comparison
     testImage = cv.imread("temp.png", cv.IMREAD_GRAYSCALE)
-    fullMap = cv.imread(regionFile, cv.IMREAD_GRAYSCALE)
+
+    # Grabbing full map in folder
+    currentWD = os.getcwd()
+    newWD = str(currentWD) + str(f"\\Maps\\{regionFile[0]}")
+    os.chdir(newWD)
+    try:
+        fullMap = cv.imread(f"{regionFile[1]}.png", cv.IMREAD_GRAYSCALE)
+    except FileNotFoundError:
+        fullMap = cv.imread(f"{regionFile[1]}.jpeg", cv.IMREAD_GRAYSCALE)
 
     # Initiate SIFT detector
     sift = cv.SIFT_create()
@@ -106,3 +125,4 @@ def search(regionFile):
 
     # Display test image vs full map w/ matches
     plt.imshow(img3,),plt.show()
+    return 1
